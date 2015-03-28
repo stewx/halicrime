@@ -29,7 +29,7 @@ logging.basicConfig(filename='%s/logs/halicrime.log' % CURRENT_DIR,
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 config = ConfigParser.ConfigParser()
-config.read('settings.cfg')
+config.read('%s/settings.cfg' % CURRENT_DIR)
 
 CSV_URL = config.get('main', 'data_url')
 
