@@ -22,7 +22,9 @@ import filecmp
 import shutil
 import ConfigParser
 
-logging.basicConfig(filename='/var/log/halicrime.log',
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+logging.basicConfig(filename='%s/logs/halicrime.log' % CURRENT_DIR, 
                     format='%(asctime)s %(levelname)s: %(message)s', level=logging.WARNING)
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
@@ -37,11 +39,11 @@ TWITTER_ACCESS_KEY = config.get('twitter', 'access_key')
 TWITTER_ACCESS_SECRET = config.get('twitter', 'access_secret')
 RATE_LIMIT = config.get('twitter', 'rate_limit')
 
-DB_USERNAME = config.get('twitter', 'db_user')
-DB_PASSWORD = config.get('twitter', 'db_pass')
-DB_NAME = config.get('twitter', 'db_name')
+DB_USERNAME = config.get('db', 'db_user')
+DB_PASSWORD = config.get('db', 'db_pass')
+DB_NAME = config.get('db', 'db_name')
 
-CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
 
 def get_twitter_api():
     '''Get connection to Twitter API'''
@@ -74,8 +76,8 @@ def load_data():
     db = get_db_connection()
 
     # Delete old event file and move current file to prev_events.csv
-    latest = "%s/latest_events.csv" % CURRENT_DIR
-    prev = "%s/prev_events.csv" % CURRENT_DIR
+    latest = "%s/csv/latest_events.csv" % CURRENT_DIR
+    prev = "%s/csv/prev_events.csv" % CURRENT_DIR
     if os.path.isfile(prev):
         os.remove(prev)
     if os.path.isfile(latest):
