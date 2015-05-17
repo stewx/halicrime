@@ -60,7 +60,7 @@ def get_db_connection():
 
 def parse_row(row):
     '''Get list of column values from row of CSV'''
-    return row.split(',')
+    return row.strip().split(',')
 
 
 def get_message_format():
