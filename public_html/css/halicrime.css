@@ -2,7 +2,7 @@
 #map-canvas {
     width: 500px;
     height: 500px;
-    
+    margin-bottom: 25px;
 }
 
 #radius-field {

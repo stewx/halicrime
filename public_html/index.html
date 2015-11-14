@@ -29,14 +29,21 @@
       <div class="container-fluid">
         <div class="row">
           <div class="col-xs-12">
-          
+            <p>Get notified when crime happens in your neighbourhood.</p>
+            <p>Change the size of the zone using this slider and click or drag on the map to re-position the zone.</p>
             <div id="radius-field">
                 <label for="radius">Area Size</label>
                 <input type="range" name="radius" id="radius" value="500" min="200" max="10000" ng-model="radius" ng-change="setRadius()">
             </div>
          
             <div id="map-canvas"></div>
-                   
+            
+            <div>
+                <form>
+                    <label>Email address</label><input type="text">
+                    <button>Notify Me</button>
+                </form>
+            </div>
           
           
           
