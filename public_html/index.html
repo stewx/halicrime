@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="halicrime">
 
   <head>
     <meta charset="utf-8" />
@@ -15,16 +15,16 @@
       <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.3/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular.min.js"></script>
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCpEmKC7qoSMNi5k21FayydQ19xW3SbzOg"></script>
     <link rel="stylesheet" href="css/halicrime.css" />
     <script src="js/halicrime.js"></script>
   </head>
 
   <body>
-    <div id="app" ng-app="halicrime" ng-controller="MapController">
+    <div id="app" ng-app="halicrime" ng-controller="MapController as mapCtrl">
       <header>
-        <h1 id="site-title" class="text-center" ng-click="console.log('a')">HaliCrime</h1>    
+        <h1 id="site-title" class="text-center">halicrime</h1>    
       </header>
       <div class="container-fluid">
         <div class="row">
@@ -33,18 +33,39 @@
             <p>Change the size of the zone using this slider and click or drag on the map to re-position the zone.</p>
             <div id="radius-field">
                 <label for="radius">Area Size</label>
-                <input type="range" name="radius" id="radius" value="500" min="200" max="10000" ng-model="radius" ng-change="setRadius()">
+                <input type="range" name="radius" id="radius" min="200" max="10000" ng-model="mapCtrl.radius" ng-change="mapCtrl.setRadius(mapCtrl.radius)">
             </div>
          
             <div id="map-canvas"></div>
             
-            <div>
-                <form>
-                    <label>Email address</label><input type="text">
-                    <button>Notify Me</button>
+            <div ng-controller="SubscriptionController as subCtrl">
+                
+                <form id="subscription_form" name="subscription_form" novalidate ng-submit="subscription_form.$valid && subCtrl.subscribe(mapCtrl.region)">
+                    
+                    <label>Email address</label><input class="form-control" type="email" required name="email" ng-model="subCtrl.form.email" value="" ng-model-options="{ updateOn: 'default blur', debounce: { default: 500, blur: 0 } }">
+                    <button class="btn btn-primary" ng-disabled="!subscription_form.$valid">Subscribe to Alerts</button>
+                    
+                    <span class="validation_error" ng-show="subscription_form.$dirty && !subscription_form.email.$valid">Please enter a valid email address.</span>
                 </form>
+                
+                <p class="success" ng-show="subCtrl.isStage('subscribed')">You have been subscribed for notifications.</p>
+                <p class="error" ng-show="subCtrl.isStage('subscribe_error')">There was an error subscribing you.</p>
+                
+                <pre>Form = {{subCtrl.form | json }}</pre>
+                <pre>subscription_form valid = {{subscription_form.$valid}}</pre>
+            
+            
+            
+            
+            
+            
+            
+            
+            
             </div>
-          
+            
+            
+            
           
           
           
