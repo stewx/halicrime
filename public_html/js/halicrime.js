@@ -1,4 +1,4 @@
-
+var map;
 (function () {
     
     var app = angular.module('halicrime', []);
@@ -9,8 +9,9 @@
     app.controller('MapController', ['$scope', '$http', function ($scope, $http) {        
         var GOOGLE_MAPS_API_KEY = 'AIzaSyCpEmKC7qoSMNi5k21FayydQ19xW3SbzOg';
         var MARKER_LIMIT = 1000;
-        var map;
+        //var map;
         var markers = [];
+        var events = [];
         var ids_mapped = [];
         var open_info_windows = [];
         var stage;
@@ -18,17 +19,111 @@
         var vm = this;
         vm.radius = 200;
       
+        
+        function cleanupMarkers() {
+
+            if (markers.length > MARKER_LIMIT) {
+                // Remove markers not in current view
+                var countRemoved = 0;
+                for (var i = 0; i < markers.length; i++) {
+                    if (markers.length <= MARKER_LIMIT) {
+                        console.log("Number of markers is within the limit (" + markers.length + "/" + MARKER_LIMIT + ").");
+                        break;
+                    }
+
+                    if (!map.getBounds().contains(markers[i].getPosition())) {
+                        // Delete from marker list
+                        markers[i].setMap(null);
+                        markers.splice(i, 1);
+                        countRemoved++;
+                    }
+                }
+                console.log("Removed " + countRemoved + " markers that were not in bounds.");
+            }
+
+        }
+              
         function handleMapClick(event) {
             vm.region.setOptions({
               center: event.latLng
             });
         }
         
+        function handleBoundsChange(event) {
+            var bounds = map.getBounds();
+            var northeastCoords = bounds.getNorthEast();
+            var southwestCoords = bounds.getSouthWest();
+
+            $.ajax({
+                url: 'ajax.php',
+                method: "GET",
+                dataType: "json",
+                data: {
+                    action: 'get_events',
+                    bounds: [southwestCoords.lng(), southwestCoords.lat(), northeastCoords.lng(), northeastCoords.lat()]
+                },
+                timeout: 10000, // 10 second timeout
+                success: function(data) {
+
+                    var events = data.events;
+                    console.log("Got " + events.length + " events from the API.");
+
+                    // Add markers
+                    addMarkers(events);
+
+                    // Clean up old markers if needed
+                    cleanupMarkers();
+                }
+            });
+        }
+        
+        function addMarkers(events) {
+            for (var i = 0; i < events.length; i++) {
+                var event = events[i];
+                if (ids_mapped.indexOf(event.id) === -1) {
+                    var icon = 'img/crime.png';
+                    var marker = new google.maps.Marker({
+                        map: map,
+                        position: {
+                            lat: parseFloat(event.latitude),
+                            lng: parseFloat(event.longitude)
+                        },
+                        title: event.event_type,
+                        //icon: icon,
+                        animation: google.maps.Animation.DROP
+                    });
+                    markers.push(marker);
+                    var contentString = '<h3>' + event.event_type + '</h3>' +
+                    '<p>' + event.street_name + '</p>' +
+                    '<p>'+ event.date + '</p>';
+                    
+                    
+                    var infoWindow = new google.maps.InfoWindow();
+                    bindInfoWindow(marker, map, infoWindow, contentString);
+
+                    ids_mapped.push(event.id);
+                }
+            }
+        }
+        
+        function bindInfoWindow(marker, map_object, infowindow, html) {
+            google.maps.event.addListener(marker, 'click', function() {
+                for (var i = 0; i < open_info_windows.length; i++) {
+                    open_info_windows[i].close();
+                }
+                open_info_windows = [];
+                infowindow.setContent(html);
+                infowindow.open(map_object, marker);
+                open_info_windows.push(infowindow);
+            });
+        }
+
+        
         vm.setRadius = function(radius) {
             if (vm.region) {
                 vm.region.setOptions({radius: parseInt(radius, 10)});                
             }
-        };
+        };  
         
         /**
         Initialize map settings 
@@ -55,6 +150,8 @@
             });
             
             map.addListener('click', handleMapClick);
+            map.addListener('bounds_changed', _.debounce(handleBoundsChange, 500));
+
         })();
 
 
@@ -97,6 +194,7 @@
               method: 'POST',
               url: 'ajax.py',
               data: {
+                  action: 'subscribe',
                   email: vm.form.email,
                   center: {lat: center.lat(),
                            lng: center.lng()},
