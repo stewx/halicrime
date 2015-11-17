@@ -77,6 +77,28 @@ var map;
             });
         }
         
+        function getIcon(crime_type){
+            var icon_path = '';
+            switch (crime_type) {
+                case 'ASSAULT':
+                    icon_path = 'img/assault.png';
+                    break;
+                case 'THEFT OF VEHICLE':
+                    icon_path = 'img/theftofmotorvehicle.png';
+                    break;
+                case 'BREAK AND ENTER':
+                    icon_path = 'img/breakandenter.png';
+                    break;
+                case 'THEFT FROM VEHICLE':
+                    icon_path = 'img/theftfrommotorvehicle.png';
+                    break;
+                case 'ROBBERY':
+                    icon_path = 'img/robbery.png';
+                    break;
+            }
+            return icon_path;
+        }
+        
         function addMarkers(events) {
             for (var i = 0; i < events.length; i++) {
                 var event = events[i];
@@ -89,11 +111,11 @@ var map;
                             lng: parseFloat(event.longitude)
                         },
                         title: event.event_type,
-                        //icon: icon,
+                        icon: getIcon(event.event_type),
                         animation: google.maps.Animation.DROP
                     });
                     markers.push(marker);
-                    var contentString = '<h3>' + event.event_type + '</h3>' +
+                    var contentString = '<h4>' + event.event_type + '</h4>' +
                     '<p>' + event.street_name + '</p>' +
                     '<p>'+ event.date + '</p>';
                     
