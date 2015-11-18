@@ -215,8 +215,7 @@ var map;
                   radius: region.getRadius()
               }
             }).then(function successCallback(response) {
-                vm.setStage('subscribed');
-
+                vm.setStage('confirm');
                 
             }, function errorCallback(response) {
                 vm.setStage('subscribe_error');

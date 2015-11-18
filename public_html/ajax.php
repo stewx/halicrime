@@ -1,5 +1,7 @@
 <?php
 
+$SITE_DOMAIN = 'halicrime.stewartrand.com';
+
 function connect_db(){
     $config = parse_ini_file("../settings.cfg", true);
 
@@ -76,6 +78,54 @@ function subscribe($form) {
     ");
     $result = mysql_query($query);
     
+    if (!$result) {
+      die("Invalid query: " . mysql_error());
+    }
+    
+    send_confirmation_email($form['email'], $guid);    
+}
+
+function send_confirmation_email($email_address, $guid) {
+  global $SITE_DOMAIN;
+  $to = $email_address;
+  $subject = "Confirm your crime alert subscription";
+  $headers = "From: Halicrime <subscribe@halicrime.ca>\r\n";
+  $headers .= "MIME-Version: 1.0\r\n";
+  $headers .= "Content-Type: text/html; charset=ISO-8859-1\r\n";
+  
+  $message = <<<EOT
+   <h2 style="font-family: Helvetica, Arial, Sans-Serif;">Halicrime</h2>
+    <p style="font-family: Helvetica, Arial, Sans-Serif;">Please confirm you want to receive crime alerts for the area of Halifax you selected.</p>
+    <p style="font-family: Helvetica, Arial, Sans-Serif;">You can unsubscribe at any time.</p>
+    <a style="font-family: Helvetica, Arial, Sans-Serif;
+    display: inline-block;
+    padding: 6px 12px;
+    margin-bottom: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.42857143;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    -ms-touch-action: manipulation;
+    touch-action: manipulation;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-image: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #fff;
+    background-color: #11A914;
+    border-color: #267700;
+    " href="http://$SITE_DOMAIN/confirm.php?guid=$guid">Confirm Subscription</a>
+    <p style="font-family: Helvetica, Arial, Sans-Serif;">If you did not request to receive crime alerts from Halicrime, you may ignore this message.</p>   
+   
+EOT;
+
+  mail($to, $subject, $message, $headers);
 }
 
 // Main code

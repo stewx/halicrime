@@ -43,37 +43,23 @@
                 
                 <form id="subscription_form" name="subscription_form" novalidate ng-submit="subscription_form.$valid && subCtrl.subscribe(mapCtrl.region)">
                     
-                    <label>Email address</label><input class="form-control" type="email" required name="email" ng-model="subCtrl.form.email" value="" ng-model-options="{ updateOn: 'default blur', debounce: { default: 500, blur: 0 } }">
-                    <button class="btn btn-primary" ng-disabled="!subscription_form.$valid">Subscribe to Alerts</button>
+                    <div class="col-lg-6">
+                      <div class="input-group">
+                        <input placeholder="Email address" class="form-control" type="email" required name="email" ng-model="subCtrl.form.email" value="" ng-model-options="{ updateOn: 'default blur', debounce: { default: 500, blur: 0 } }">
+                        <span class="input-group-btn">
+                          <button class="btn btn-primary" ng-disabled="!subscription_form.$valid">Subscribe to Alerts</button>
+                        </span>
+                      </div>
+                    </div>
                     
                     <span class="validation_error" ng-show="subscription_form.$dirty && !subscription_form.email.$valid">Please enter a valid email address.</span>
                 </form>
                 
-                <p class="success" ng-show="subCtrl.isStage('subscribed')">You have been subscribed for notifications.</p>
+                <p class="success" ng-show="subCtrl.isStage('confirm')">We have sent you an email to confirm your subscription. Please click the activation link inside.</p>
                 <p class="error" ng-show="subCtrl.isStage('subscribe_error')">There was an error subscribing you.</p>
                 
-                <pre>Form = {{subCtrl.form | json }}</pre>
-                <pre>subscription_form valid = {{subscription_form.$valid}}</pre>
-            
-            
-            
-            
-            
-            
-            
-            
-            
             </div>
             
-            
-            
-          
-          
-          
-          
-          
-          
-          
           
           </div>
           <!-- end .col-xs-12 -->
