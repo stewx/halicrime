@@ -19,7 +19,9 @@ var map;
         var vm = this;
         vm.radius = 200;
       
-        
+        function toTitleCase(str) {
+            return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+        }
         function cleanupMarkers() {
 
             if (markers.length > MARKER_LIMIT) {
@@ -54,26 +56,23 @@ var map;
             var northeastCoords = bounds.getNorthEast();
             var southwestCoords = bounds.getSouthWest();
 
-            $.ajax({
+            $http({
                 url: 'ajax.php',
                 method: "GET",
-                dataType: "json",
-                data: {
+                params: {
                     action: 'get_events',
-                    bounds: [southwestCoords.lng(), southwestCoords.lat(), northeastCoords.lng(), northeastCoords.lat()]
+                    bounds: [southwestCoords.lng(), southwestCoords.lat(), northeastCoords.lng(), northeastCoords.lat()].join(',')
                 },
-                timeout: 10000, // 10 second timeout
-                success: function(data) {
+                timeout: 10000 // 10 second timeout
+            }).then(function successCallback(response) {
+                var events = response.data.events;
+                console.log("Got " + events.length + " events from the API.");
 
-                    var events = data.events;
-                    console.log("Got " + events.length + " events from the API.");
+                // Add markers
+                addMarkers(events);
 
-                    // Add markers
-                    addMarkers(events);
-
-                    // Clean up old markers if needed
-                    cleanupMarkers();
-                }
+                // Clean up old markers if needed
+                cleanupMarkers();
             });
         }
         
@@ -115,8 +114,8 @@ var map;
                         animation: google.maps.Animation.DROP
                     });
                     markers.push(marker);
-                    var contentString = '<h4>' + event.event_type + '</h4>' +
-                    '<p>' + event.street_name + '</p>' +
+                    var contentString = '<h4>' + toTitleCase(event.event_type) + '</h4>' +
+                    '<p>' + toTitleCase(event.street_name) + '</p>' +
                     '<p>'+ event.date + '</p>';
                     
                     
@@ -168,7 +167,8 @@ var map;
               map: map,
               center: mapOptions.center,
               draggable: true,
-              radius: vm.radius
+              radius: vm.radius,
+              zIndex: 50
             });
             
             map.addListener('click', handleMapClick);
@@ -201,20 +201,12 @@ var map;
             return re.test(email);
         }
         
-        // $scope.validateForm = function(form) {
-            // if (validEmail(form.email)) {
-                // return true;
-            // } else {
-                // $scope.setStage('invalid_email');
-                // return false;
-            // }
-        // };
       
         vm.subscribe = function(region) {
             var center = region.getCenter();
             $http({
               method: 'POST',
-              url: 'ajax.py',
+              url: 'ajax.php',
               data: {
                   action: 'subscribe',
                   email: vm.form.email,
@@ -226,10 +218,10 @@ var map;
                 vm.setStage('subscribed');
 
                 
-              }, function errorCallback(response) {
+            }, function errorCallback(response) {
                 vm.setStage('subscribe_error');
                 
-              });
+            });
             
             
         };

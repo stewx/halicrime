@@ -15,8 +15,20 @@ function connect_db(){
     }
 }
 
+function getGUID() {
+    mt_srand((double)microtime()*10000);//optional for php 4.2.0 and up.
+    $charid = strtoupper(md5(uniqid(rand(), true)));
+    $hyphen = chr(45);// "-"
+    $uuid = substr($charid, 0, 8).$hyphen
+        .substr($charid, 8, 4).$hyphen
+        .substr($charid,12, 4).$hyphen
+        .substr($charid,16, 4).$hyphen
+        .substr($charid,20,12);
+    return $uuid;
+}
+
 function get_events($form) {
-    $bounds = $form['bounds']; 
+    $bounds = explode(',', $form['bounds']); 
     $southwest = array(
         'lng' => $bounds[0],
         'lat' => $bounds[1]
@@ -32,6 +44,7 @@ function get_events($form) {
         WHERE
             `latitude` BETWEEN {$southwest['lat']} AND {$northeast['lat']}
             AND `longitude` BETWEEN {$southwest['lng']} AND {$northeast['lng']}
+            AND `date` > DATE_SUB(CURDATE(), INTERVAL 30 DAY)
         LIMIT 1000
     
     ");
@@ -55,6 +68,13 @@ function get_events($form) {
 }
 
 function subscribe($form) {
+    $guid = getGUID();
+    $name = $form['name'] ? "\"{$form['name']}\"" : "NULL";
+    $query = sprintf("
+    INSERT INTO `subscriptions` (`guid`, `created`, `lat`, `lng`, `radius`, `name`, `email`)
+    VALUES ('$guid', NOW(), {$form['center']['lat']}, {$form['center']['lng']}, {$form['radius']}, {$name}, '{$form['email']}')
+    ");
+    $result = mysql_query($query);
     
 }
 
@@ -62,16 +82,21 @@ function subscribe($form) {
 
 connect_db();
 
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    if ($_GET['action'] == 'get_events') {
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $raw_json = file_get_contents('php://input');
+    $form_data = json_decode($raw_json, true);
+    if ($form_data['action'] === 'subscribe') {
+        subscribe($form_data);
+    }
+} elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    if ($_GET['action'] === 'get_events') {
         get_events($_GET);
-    }
+    }    
+    
 }
-elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($_POST['action'] === 'subscribe') {
-        subscribe($_POST);
-    }
-}
+
+
 
 
 
