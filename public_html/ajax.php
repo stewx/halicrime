@@ -2,20 +2,7 @@
 
 $SITE_DOMAIN = 'halicrime.stewartrand.com';
 
-function connect_db(){
-    $config = parse_ini_file("../settings.cfg", true);
-
-    $connection=mysql_connect(localhost, $config['db']['db_user'], $config['db']['db_pass']);
-    if (!$connection) {
-      die("Not connected : " . mysql_error());
-    }
-
-    // Set the active mySQL database
-    $db_selected = mysql_select_db($config['db']['db_name'], $connection);
-    if (!$db_selected) {
-      die ("Can\'t use db : " . mysql_error());
-    }
-}
+include 'db.php';
 
 function getGUID() {
     mt_srand((double)microtime()*10000);//optional for php 4.2.0 and up.
@@ -73,7 +60,7 @@ function subscribe($form) {
     $guid = getGUID();
     $name = $form['name'] ? "\"{$form['name']}\"" : "NULL";
     $query = sprintf("
-    INSERT INTO `subscriptions` (`guid`, `created`, `lat`, `lng`, `radius`, `name`, `email`)
+    INSERT INTO `subscriptions` (`guid`, `created`, `latitude`, `longitude`, `radius`, `name`, `email`)
     VALUES ('$guid', NOW(), {$form['center']['lat']}, {$form['center']['lng']}, {$form['radius']}, {$name}, '{$form['email']}')
     ");
     $result = mysql_query($query);

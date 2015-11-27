@@ -25,7 +25,7 @@ import ConfigParser
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 logging.basicConfig(filename='%s/logs/halicrime.log' % CURRENT_DIR, 
-                    format='%(asctime)s %(levelname)s: %(message)s', level=logging.WARNING)
+                    format='%(asctime)s %(levelname)s: %(message)s', level=logging.INFO)
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 config = ConfigParser.ConfigParser()
@@ -90,8 +90,10 @@ def load_data():
     # Check if new file is same as old
     if os.path.isfile(prev) and filecmp.cmp(latest, prev):
         print 'No new data in CSV.'
+        logging.info('No new data in CSV.')
         return
 
+    new_events = 0
     # If it has new data, load data into DB
     with open(latest, 'rb') as csv_file:
         # Skip header line
@@ -107,6 +109,7 @@ def load_data():
                 event_date = datetime.datetime.strptime(date_string[:10], '%Y-%m-%d').date()
             except ValueError:
                 print 'Something wrong with this row: %s' % ''.join(row)
+                logging.error('Something wrong with this row: %s' % ''.join(row))
                 continue
 
             # Check if it's new
@@ -123,6 +126,7 @@ def load_data():
                 continue
             else:
                 print 'New entry.'
+                new_events += 1;
 
             # Insert into DB
             insert_query = """
@@ -133,6 +137,7 @@ def load_data():
                                   event_type_id, event_type_name)
             db.execute(insert_query)
     db.close()
+    logging.info("Saved %i new events to database." % new_events)
 
 
 def post_tweets():
