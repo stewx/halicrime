@@ -2,7 +2,7 @@
 
 
 // Code here to set subscription as active in DB
-include 'db.php';
+include 'util.php';
 connect_db();
 
 function confirm_subscription($guid) {

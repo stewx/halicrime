@@ -2,19 +2,7 @@
 
 $SITE_DOMAIN = 'halicrime.stewartrand.com';
 
-include 'db.php';
-
-function getGUID() {
-    mt_srand((double)microtime()*10000);//optional for php 4.2.0 and up.
-    $charid = strtoupper(md5(uniqid(rand(), true)));
-    $hyphen = chr(45);// "-"
-    $uuid = substr($charid, 0, 8).$hyphen
-        .substr($charid, 8, 4).$hyphen
-        .substr($charid,12, 4).$hyphen
-        .substr($charid,16, 4).$hyphen
-        .substr($charid,20,12);
-    return $uuid;
-}
+include 'util.php';
 
 function get_events($form) {
     $bounds = explode(',', $form['bounds']); 
@@ -44,7 +32,7 @@ function get_events($form) {
     }
 
     $events = array();
-    while ($row = @mysql_fetch_assoc($result)){
+    while ($row = mysql_fetch_assoc($result)){
       $events[] = $row;
     }
 

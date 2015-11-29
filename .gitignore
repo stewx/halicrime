@@ -56,3 +56,4 @@ target/
 # Internal use
 *.csv
 settings.cfg
+public_html/img/map_snapshots
