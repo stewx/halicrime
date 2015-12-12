@@ -2,14 +2,15 @@
 
 include 'util.php';
 
-$config = parse_ini_file(dirname(dirname(__FILE__)) . "/settings.cfg", true);
+$config = parse_ini_file(dirname(__FILE__) . "/settings.cfg", true);
 $STATIC_API_KEY = $config['google_maps']['static_api_key'];
 $SITE_DOMAIN = 'halicrime.stewartrand.com';
 
 connect_db();
 
 // Get active subscriptions
-$subscriptions = mysql_query("SELECT * FROM `subscriptions` WHERE `activated` = 1");
+echo "Looking up subscriptions\n";
+$subscriptions = mysql_query("SELECT * FROM `subscriptions` WHERE `activated` = 1 AND `unsubscribed` = 0");
 
 if (!$subscriptions) {
   die("Invalid query: " . mysql_error());
@@ -17,11 +18,11 @@ if (!$subscriptions) {
 
 // For each subscription, check if there have been any matching events since the last run
 while ($subscription = mysql_fetch_assoc($subscriptions)) {
-  
+  echo "Looking up recent events.";
   $query = "
     SELECT *
     FROM `events`  INNER JOIN `event_types` ON `events`.`event_type_id` = `event_types`.`code`
-    WHERE `date` > DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    WHERE `date_added` > DATE_SUB(CURDATE(), INTERVAL 7 DAY)
     AND ( 6371 * acos( cos( radians({$subscription['latitude']}) ) * cos( radians( `latitude`) ) * cos( radians( `longitude` ) - radians({$subscription['longitude']}) ) + sin( radians({$subscription['latitude']}) ) * sin( radians( `latitude` ) ) ) )  < ({$subscription['radius']} / 1000)
     ORDER BY `date` DESC
   ";
@@ -42,9 +43,24 @@ while ($subscription = mysql_fetch_assoc($subscriptions)) {
 function sendNotification($subscription, $events) {
   global $SITE_DOMAIN;
   
+  $earliest_event_query = "
+    SELECT `date`
+    FROM `events`  INNER JOIN `event_types` ON `events`.`event_type_id` = `event_types`.`code`
+    WHERE `date_added` > DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+ORDER BY `events`.`date` ASC
+LIMIT 1";
+  $earliest_res = mysql_query($earliest_event_query);
+  $row = mysql_fetch_assoc($earliest_res);
+  $earliest_date = new DateTime($row['date']);
+  
+  $end_date = clone $earliest_date;
+  $end_date->sub(new DateInterval("P1D"));
+  $start_date = clone $earliest_date;
+  $start_date->sub(new DateInterval("P7D"));
+
   // Look up YTD numbers
   $ytd_stats = getYTD($subscription);
-  $prev_stats = getPrev($subscription);
+  $prev_stats = getPrev($subscription, $start_date, $end_date);
   
   
   // Track number of occurrences of each type of event
@@ -60,12 +76,11 @@ function sendNotification($subscription, $events) {
   
   $event_types_found = array_keys(array_merge($frequencies, $prev_stats, $ytd_stats));
   
-  $table_style = "font-family: Helvetica, Arial, Sans-Serif; text-align: left;";
-  $td_style = "padding-right: 15px; white-space: nowrap; font-size: 14px;";
+  $table_style = "font-family: Helvetica, Arial, Sans-Serif; text-align: left; border-spacing: 0; border: 1px solid #CCC; border-radius: 5px;";
+  $td_style = "padding: 8px; padding-right: 15px; white-space: nowrap; font-size: 14px;";
   $th_style = "border-bottom: 2px solid #ddd;";
   $odd_td_style = "";
   $img_style= "border: 1px solid gray; margin-bottom: 20px; margin-top: 5px;";
-  $container_style = "padding: 20px; margin: 20px 0; border: 1px solid #BBB; border-radius: 10px;";
   
   $summary_table = "<table style=\"$table_style\">";
   $summary_table .= "
@@ -74,12 +89,13 @@ function sendNotification($subscription, $events) {
         <th style=\"$td_style $th_style\">Type</th>
         <th style=\"$td_style $th_style\">This Week</th>
         <th style=\"$td_style $th_style\">Last Week</th>
-        <th style=\"$td_style $th_style\">&plusmn;</th>
+        <th style=\"$td_style $th_style\">+/-</th>
         <th style=\"$td_style $th_style\">YTD</th>
       </tr>
     </thead>
   ";
   echo "Summarizing frequencies...\n";
+  $row_counter = 0;
   foreach ($event_types_found as $event_type) {
     if (isset($frequencies[$event_type])) {
       $current_count = $frequencies[$event_type];
@@ -106,8 +122,14 @@ function sendNotification($subscription, $events) {
       $change_count = "";
     }
     
+    if (($row_counter % 2) == 1) {
+      $row_style = "background-color: #EEEEEE;";
+    } else {
+      $row_style= "";
+    }
+    
     $summary_table .= "
-    <tr>
+    <tr style=\"$row_style\">
       <td style=\"$td_style\">$event_type</td>
       <td style=\"$td_style\">$current_count</td>
       <td style=\"$td_style\">$prev_count</td>
@@ -115,6 +137,7 @@ function sendNotification($subscription, $events) {
       <td style=\"$td_style\">$ytd_count</td>
     </tr>
     ";
+    $row_counter++;
   }
   $summary_table .= "</table>";
   
@@ -130,22 +153,29 @@ function sendNotification($subscription, $events) {
   ";
   
   echo "Building detail table...\n";
+  $row_counter = 0;
   foreach ($events as $event) {
     echo "Found event of type {$event['name']}\n";
     $date = date("l, M jS", strtotime($event['date']));
     $event_type = $event['name'];
     $street_name = ucwords(strtolower($event['street_name']));
     $map_image_url = saveImage($event['id'], $event['latitude'], $event['longitude'], $event['event_type']);
+    if (($row_counter % 2) == 1) {
+      $row_style = "background-color: #EEEEEE;";
+    } else {
+      $row_style= "";
+    }
     $detail_table .= "
-    <tr>
+    <tr style=\"$row_style\">
       <td style=\"$td_style\">$date</td>
       <td style=\"$td_style\">$event_type</td>
       <td style=\"$td_style\">$street_name</td>
     </tr>
-    <tr>
+    <tr style=\"$row_style\">
       <td colspan=\"3\" style=\"$td_style\"><img style=\"$img_style\" alt=\"Map\" src=\"$map_image_url\"></td>
     </tr>
     ";
+    $row_counter ++;
   }
   $detail_table .= "</table>";
   
@@ -153,10 +183,8 @@ function sendNotification($subscription, $events) {
     <h2 style="font-family: Helvetica, Arial, Sans-Serif;">Halicrime</h2>
     <p style="font-family: Helvetica, Arial, Sans-Serif;">Here are the events that happened.</p>  
     
-    <div style="$container_style">
-      <h3 style="font-family: Helvetica, Arial, Sans-Serif; margin-top: 0;">Summary</h3>
-      $summary_table
-    </div>
+    <h3 style="font-family: Helvetica, Arial, Sans-Serif; margin-top: 0;">Summary</h3>
+    $summary_table
     
     <h3 style="font-family: Helvetica, Arial, Sans-Serif;">Details</h3>
     
@@ -181,12 +209,14 @@ EOT;
 /* 
  Get event type counts for the previous period
 */
-function getPrev($subscription) {
-  // TODO: Figure out what the correct prev period is
+function getPrev($subscription, $start_date, $end_date) {
+  echo "Checking previous period.\n";
+  $start_date_string = $start_date->format("Y-m-d");
+  $end_date_string = $end_date->format("Y-m-d");
   $query = "
   SELECT `name`, COUNT(*) as 'count'
   FROM `events` INNER JOIN `event_types` ON `events`.`event_type_id` = `event_types`.`code`
-  WHERE `date` BETWEEN DATE_SUB(CURDATE(), INTERVAL 60 DAY) AND DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+  WHERE `date` BETWEEN '$start_date_string' AND '$end_date_string'
   AND ( 6371 * acos( cos( radians( {$subscription['latitude']} ) ) * cos( radians( `latitude`) ) * cos( radians( `longitude` ) - radians({$subscription['longitude']}) ) + sin( radians( {$subscription['latitude']} ) ) * sin( radians( `latitude` ) ) ) ) < ({$subscription['radius']} / 1000)
   GROUP BY `name`
   ";
@@ -204,6 +234,7 @@ function getPrev($subscription) {
   Get year-to-date crime type counts for the area specified
 */
 function getYTD($subscription) {
+  echo "Getting YTD stats.\n";
   $query = "
   SELECT `name`, COUNT(*) as 'count'
   FROM `events` INNER JOIN `event_types` ON `events`.`event_type_id` = `event_types`.`code`
@@ -229,7 +260,7 @@ function saveImage($id, $latitude, $longitude, $basic_event_type){
   global $SITE_DOMAIN;
   global $STATIC_API_KEY;
   
-  $filename = "img/map_snapshots/event_$id.png";
+  $filename = "public_html/img/map_snapshots/event_$id.png";
   $disk_location = dirname(__FILE__) . "/" . $filename;
   // If we already have the image, don't re-download it
   if (file_exists($disk_location)) {

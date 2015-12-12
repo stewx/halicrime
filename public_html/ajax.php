@@ -2,7 +2,7 @@
 
 $SITE_DOMAIN = 'halicrime.stewartrand.com';
 
-include 'util.php';
+include '../util.php';
 
 function get_events($form) {
     $bounds = explode(',', $form['bounds']); 

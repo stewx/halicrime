@@ -2,10 +2,10 @@
 
 
 // Code here to set subscription as active in DB
-include 'util.php';
+include '../util.php';
 connect_db();
 
-function confirm_subscription($guid) {
+function confirmSubscription($guid) {
   
   $result = mysql_query("SELECT * FROM `subscriptions` WHERE `guid` = '$guid'");
   if (mysql_num_rows($result) == 0) {
@@ -31,7 +31,7 @@ function confirm_subscription($guid) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($_GET['guid']) {
-        confirm_subscription($_GET['guid']);
+        confirmSubscription($_GET['guid']);
     }    
     
 }

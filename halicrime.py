@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 Stewart Rand 2015
 Halifax crime tweets
@@ -131,8 +133,8 @@ def load_data():
             # Insert into DB
             insert_query = """
                            INSERT INTO
-                            `events` (`latitude`, `longitude`, `event_id`, `date`, `street_name`, `event_type_id`, `event_type`)
-                           VALUES (%s, %s, %s, "%s", "%s", %s, "%s")
+                            `events` (`date_added`, `latitude`, `longitude`, `event_id`, `date`, `street_name`, `event_type_id`, `event_type`)
+                           VALUES (CURRENT_DATE(), %s, %s, %s, "%s", "%s", %s, "%s")
                            """ % (latitude, longitude, event_id, event_date, street_name,
                                   event_type_id, event_type_name)
             db.execute(insert_query)
