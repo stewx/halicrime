@@ -260,8 +260,8 @@ function saveImage($id, $latitude, $longitude, $basic_event_type){
   global $SITE_DOMAIN;
   global $STATIC_API_KEY;
   
-  $filename = "public_html/img/map_snapshots/event_$id.png";
-  $disk_location = dirname(__FILE__) . "/" . $filename;
+  $filename = "img/map_snapshots/event_$id.png";
+  $disk_location = dirname(__FILE__) . "/public_html/" . $filename;
   // If we already have the image, don't re-download it
   if (file_exists($disk_location)) {
     echo "Image already downloaded.\n";
