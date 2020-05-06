@@ -57,3 +57,6 @@ target/
 *.csv
 settings.cfg
 public_html/img/map_snapshots
+
+data/
+.env
