@@ -17,7 +17,7 @@
     <![endif]-->
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.10.1/lodash.min.js"></script>
-    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCpEmKC7qoSMNi5k21FayydQ19xW3SbzOg"></script>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=<?php echo $_ENV['GOOGLE_API_KEY']; ?>"></script>
     <link rel="stylesheet" href="css/halicrime.css" />
     <script src="js/halicrime.js"></script>
   </head>
