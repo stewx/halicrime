@@ -3,16 +3,25 @@
 function connect_db(){
     $config = parse_ini_file(dirname(__FILE__) . "/settings.cfg", true);
 
-    $connection = mysql_connect('localhost', $config['db']['db_user'], $config['db']['db_pass']);
+    $host = getenv('DB_HOST');
+    $host = $host ? $host : 'localhost';
+    
+    $user = $config['db']['db_user'];
+    $user = $user ? $user : getenv('MYSQL_USER');
+
+    $pass = $config['db']['db_pass'];
+    $pass = $pass ? $pass : getenv('MYSQL_PASSWORD');
+
+    $db = $config['db']['db_name'];
+    $db = $db ? $db : getenv('MYSQL_DATABASE');
+
+    $connection = new mysqli($host, $user, $pass, $db);
+    
     if (!$connection) {
-      die("Not connected : " . mysql_error());
+      die("Not connected : " . $connection->connect_error);
     }
 
-    // Set the active mySQL database
-    $db_selected = mysql_select_db($config['db']['db_name'], $connection);
-    if (!$db_selected) {
-      die ("Can\'t use db : " . mysql_error());
-    }
+    return $connection;
 }
 
 function getGUID() {
@@ -26,5 +35,3 @@ function getGUID() {
         .substr($charid,20,12);
     return $uuid;
 }
-
-?>

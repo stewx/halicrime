@@ -1,10 +1,12 @@
 <?php
 
-$SITE_DOMAIN = 'halicrime.stewartrand.com';
+$SITE_DOMAIN = getenv('SITE_DOMAIN');
 
 include '../util.php';
 
 function get_events($form) {
+    $connection = connect_db();
+
     $bounds = explode(',', $form['bounds']); 
     $southwest = array(
         'lng' => $bounds[0],
@@ -23,18 +25,19 @@ function get_events($form) {
             AND `longitude` BETWEEN {$southwest['lng']} AND {$northeast['lng']}
             AND `date` > DATE_SUB(CURDATE(), INTERVAL 30 DAY)
         LIMIT 1000
-    
     ");
-    $result = mysql_query($query);
+    $result = $connection->query($query);
 
     if (!$result) {
-      die("Invalid query: " . mysql_error());
+      die("Invalid query: " . $connection->error);
     }
 
     $events = array();
-    while ($row = mysql_fetch_assoc($result)){
+    while ($row = mysqli_fetch_assoc($result)){
       $events[] = $row;
     }
+
+    mysqli_close($connection);
 
     header("Content-type: application/json");
     $response_data = array(
@@ -45,17 +48,20 @@ function get_events($form) {
 }
 
 function subscribe($form) {
+    $connection = connect_db();
     $guid = getGUID();
     $name = $form['name'] ? "\"{$form['name']}\"" : "NULL";
     $query = sprintf("
     INSERT INTO `subscriptions` (`guid`, `created`, `latitude`, `longitude`, `radius`, `name`, `email`)
     VALUES ('$guid', NOW(), {$form['center']['lat']}, {$form['center']['lng']}, {$form['radius']}, {$name}, '{$form['email']}')
     ");
-    $result = mysql_query($query);
+    $result = $connection->query($query);
     
     if (!$result) {
-      die("Invalid query: " . mysql_error());
+      die("Invalid query: " . $connection->error);
     }
+
+    mysqli_close($connection);
     
     send_confirmation_email($form['email'], $guid);    
 }
@@ -104,10 +110,6 @@ EOT;
 }
 
 // Main code
-
-connect_db();
-
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $raw_json = file_get_contents('php://input');
     $form_data = json_decode($raw_json, true);
@@ -117,13 +119,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 } elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($_GET['action'] === 'get_events') {
         get_events($_GET);
-    }    
-    
+    }
 }
-
-
-
-
-
-
-?>
