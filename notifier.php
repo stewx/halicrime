@@ -42,8 +42,6 @@ while ($subscription = mysqli_fetch_assoc($subscriptions)) {
 
   $matching_events = $connection->query($query);
   
-  $rowcount = mysqli_num_rows($matching_events);
-
   $events = array();
 
   while($event = mysqli_fetch_assoc($matching_events)){
