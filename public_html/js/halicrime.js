@@ -58,22 +58,28 @@ var map;
         });
       }
 
+      function truncate(degree) {
+        var decimals = 3;
+        var div = Math.pow(10, decimals);
+        return Math.ceil(degree * div) / div;
+      }
+
       function handleBoundsChange(event) {
         var bounds = map.getBounds();
         var northeastCoords = bounds.getNorthEast();
         var southwestCoords = bounds.getSouthWest();
+        // could likely cache requests easier with truncated coords
+        var swLng = truncate(southwestCoords.lng());
+        var swLat = truncate(southwestCoords.lat());
+        var neLng = truncate(northeastCoords.lng());
+        var neLat = truncate(northeastCoords.lat());
 
         $http({
           url: "ajax.php",
           method: "GET",
           params: {
             action: "get_events",
-            bounds: [
-              southwestCoords.lng(),
-              southwestCoords.lat(),
-              northeastCoords.lng(),
-              northeastCoords.lat(),
-            ].join(","),
+            bounds: [swLng, swLat, neLng, neLat].join(","),
           },
           timeout: 10000, // 10 second timeout
         }).then(function successCallback(response) {
