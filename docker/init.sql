@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS `subscriptions` (
     `name` VARCHAR(255),
     `email` VARCHAR(255) NOT NULL,
     `activated` INT,
+    `unsubscribed` INT DEFAULT 0,
     PRIMARY KEY ( `guid` ),
     UNIQUE ( `email` )
 );
