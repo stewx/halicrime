@@ -15,6 +15,7 @@ RUN docker-php-ext-install mysqli \
     python-pip \
     python-dev \
     mariadb-server \
+    cron \
     git \
     && rm -rf /var/lib/apt/lists/*
 
@@ -44,9 +45,11 @@ RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
 COPY ./docker/docker-entrypoint.sh /usr/local/bin/
 
 #
-# copy the rest of the app over
+# copy crontab
 #
-COPY . .
+COPY ./docker/notifier-cron /etc/cron.d
+RUN chmod 0644 /etc/cron.d/notifier-cron \
+    && crontab /etc/cron.d/notifier-cron
 
 ENTRYPOINT [ "docker-entrypoint.sh" ]
 CMD ["php-fpm"]

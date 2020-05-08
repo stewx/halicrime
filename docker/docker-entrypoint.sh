@@ -49,6 +49,16 @@ if [ "$@" = "php-fpm" ]; then
     # run python script
     #
     python halicrime.py load_data
+
+    #
+    # set environment variables for cron
+    #
+    env > /etc/environment
+
+    #
+    # run cronjob for notifier
+    #
+    cron
 fi
 
 #
