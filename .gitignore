@@ -60,3 +60,4 @@ public_html/img/map_snapshots
 
 data/
 .env
+vendor/
