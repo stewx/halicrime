@@ -17,15 +17,13 @@ function get_events($form) {
         'lat' => $bounds[3]
     );
     
-    $query = sprintf("
-        SELECT *
+    $query = sprintf("SELECT *
         FROM `events`
         WHERE
             `latitude` BETWEEN {$southwest['lat']} AND {$northeast['lat']}
             AND `longitude` BETWEEN {$southwest['lng']} AND {$northeast['lng']}
             AND `date` > DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-        LIMIT 1000
-    ");
+        LIMIT 1000");
     $result = $connection->query($query);
 
     if (!$result) {
@@ -51,8 +49,8 @@ function subscribe($form) {
     $connection = connect_db();
     $guid = getGUID();
     $name = $form['name'] ? "\"{$form['name']}\"" : "NULL";
-    $query = sprintf("
-    INSERT INTO `subscriptions` (`guid`, `created`, `latitude`, `longitude`, `radius`, `name`, `email`)
+    $query = sprintf("INSERT INTO `subscriptions` 
+    (`guid`, `created`, `latitude`, `longitude`, `radius`, `name`, `email`)
     VALUES ('$guid', NOW(), {$form['center']['lat']}, {$form['center']['lng']}, {$form['radius']}, {$name}, '{$form['email']}')
     ");
     $result = $connection->query($query);
