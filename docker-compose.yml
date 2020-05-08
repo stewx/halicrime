@@ -5,7 +5,8 @@ services:
     image: nginx
     # command: [nginx-debug, "-g", "daemon off;"]
     volumes:
-      - ./:/var/www/html
+      # share php files with php service
+      - ./:/app:ro
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       # - ./nginx.error.log:/var/logs/nginx/site.error.log
     ports:
@@ -28,9 +29,8 @@ services:
       context: .
     env_file: .env
     volumes:
-      - ./:/var/www/html
-      - ./logs:/app/logs
-      - ./data:/app/data
+      # share php files with nginx service
+      - ./:/app
     environment:
       DB_HOST: mysql
     depends_on:
