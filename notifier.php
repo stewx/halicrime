@@ -13,6 +13,7 @@ include 'util.php';
 $config = parse_ini_file(dirname(__FILE__) . "/settings.cfg", true);
 $STATIC_API_KEY = getenv('GOOGLE_STATIC_KEY');
 $SITE_DOMAIN = getenv('SITE_DOMAIN');
+$INTERVAL = '1 DAY';
 
 $connection = connect_db();
 
@@ -34,7 +35,7 @@ while ($subscription = mysqli_fetch_assoc($subscriptions)) {
  
   $query = "SELECT *
     FROM `events`
-    WHERE `date_added` > DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    WHERE `date_added` > DATE_SUB(CURDATE(), INTERVAL $INTERVAL)
     AND ( 6371 * acos( cos( radians({$subscription['latitude']}) ) * cos( radians( `latitude`) ) * cos( radians( `longitude` ) - radians({$subscription['longitude']}) ) + sin( radians({$subscription['latitude']}) ) * sin( radians( `latitude` ) ) ) )  < ({$subscription['radius']} / 1000)
     ORDER BY `date` DESC
   ";
@@ -60,10 +61,11 @@ mysqli_close($connection);
 function sendNotification($subscription, $events) {
   global $SITE_DOMAIN;
   global $connection;
+  global $INTERVAL;
   
   $earliest_res = $connection->query("SELECT `date`
     FROM `events`
-    WHERE `date_added` > DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    WHERE `date_added` > DATE_SUB(CURDATE(), INTERVAL $INTERVAL)
     ORDER BY `events`.`date` ASC
     LIMIT 1");
   $row = mysqli_fetch_assoc($earliest_res);

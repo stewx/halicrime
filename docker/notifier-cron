@@ -1,2 +1,2 @@
 # m h  dom mon dow   command
-0 0 * * sun /usr/bin/python /app/halicrime.py load_data >> /app/logs/cron.log 2>&1 && /usr/local/bin/php /app/notifier.php >> /app/logs/cron.log 2>&1
+0 22 * sun /usr/bin/python /app/halicrime.py load_data >> /app/logs/cron.log 2>&1 && /usr/local/bin/php /app/notifier.php >> /app/logs/cron.log 2>&1
