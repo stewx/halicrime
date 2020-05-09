@@ -95,7 +95,7 @@ var map;
       }
 
       function getIcon(crime_type) {
-        var icon_path = "";
+        var icon_path = "img/crime.png";
         switch (crime_type) {
           case "ASSAULT":
             icon_path = "img/assault.png";
@@ -120,7 +120,6 @@ var map;
         for (var i = 0; i < events.length; i++) {
           var event = events[i];
           if (ids_mapped.indexOf(event.id) === -1) {
-            var icon = "img/crime.png";
             var marker = new google.maps.Marker({
               map: map,
               position: {
