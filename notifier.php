@@ -13,7 +13,8 @@ include 'util.php';
 $config = parse_ini_file(dirname(__FILE__) . "/settings.cfg", true);
 $STATIC_API_KEY = getenv('GOOGLE_STATIC_KEY');
 $SITE_DOMAIN = getenv('SITE_DOMAIN');
-$INTERVAL = '1 DAY';
+$FROM_EMAIL = getenv('FROM_EMAIL');
+$INTERVAL = '7 DAY';
 
 $connection = connect_db();
 
@@ -58,6 +59,7 @@ mysqli_close($connection);
 // Send email
 function sendNotification($subscription, $events) {
   global $SITE_DOMAIN;
+  global $FROM_EMAIL;
   global $connection;
   global $INTERVAL;
   
@@ -224,11 +226,8 @@ EOT;
   try {
     $to = $subscription['email'];
     $subject = "Halicrime Alerts";
-    $headers = "From: Halicrime <subscribe@halicrime.ca>\r\n";
-    $headers .= "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: text/html; charset=ISO-8859-1\r\n";
   
-    $mail->setFrom('subscribe@halicrime.ca', 'Halicrime');
+    $mail->setFrom($FROM_EMAIL, 'Halicrime');
     $mail->addAddress($subscription['email']);
     $mail->Subject = $subject;
     $mail->isHTML(true);
@@ -242,9 +241,6 @@ EOT;
     
     $mail->send();
     echo "email sent\n";
-
-    # without PHPMailer
-    # mail($to, $subject, $message, $headers);
   } catch (Exception $e) {
     echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
   }

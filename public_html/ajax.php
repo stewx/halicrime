@@ -1,6 +1,7 @@
 <?php
 
 $SITE_DOMAIN = getenv('SITE_DOMAIN');
+$FROM_EMAIL = getenv('FROM_EMAIL');
 
 include '../util.php';
 
@@ -66,9 +67,11 @@ function subscribe($form) {
 
 function send_confirmation_email($email_address, $guid) {
   global $SITE_DOMAIN;
+  global $FROM_EMAIL;
+
   $to = $email_address;
   $subject = "Confirm your crime alert subscription";
-  $headers = "From: Halicrime <subscribe@halicrime.ca>\r\n";
+  $headers = "From: Halicrime <$FROM_EMAIL>\r\n";
   $headers .= "MIME-Version: 1.0\r\n";
   $headers .= "Content-Type: text/html; charset=ISO-8859-1\r\n";
   
