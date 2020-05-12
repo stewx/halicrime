@@ -1,40 +1,37 @@
 <?php
 
-
 // Code here to set subscription as active in DB
 include '../util.php';
-connect_db();
 
 function confirmSubscription($guid) {
+  $connection = connect_db();
   
-  $result = mysql_query("SELECT * FROM `subscriptions` WHERE `guid` = '$guid'");
-  if (mysql_num_rows($result) == 0) {
+  $result = $connection->query("SELECT * FROM `subscriptions` WHERE `guid` = '$guid'");
+
+  if (mysqli_num_rows($result) == 0) {
     die("Couldn't find subscription.");
   }
-  
+
   $query = "
     UPDATE `subscriptions` 
     SET `activated` = 1
     WHERE `guid` = '$guid'
   ";
-  $result = mysql_query($query);
+  $result = $connection->query($query);
     
   if (!$result) {
-    die("Invalid query: " . mysql_error());
+    die("Invalid query: " . $connection->error);
   }
+
+  mysqli_close($connection);
   
   // Show confirmation page to user
-  include 'confirmed.html';
+  include 'confirmed.php';
   die();
-  
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($_GET['guid']) {
         confirmSubscription($_GET['guid']);
-    }    
-    
+    }
 }
-
-
-?>

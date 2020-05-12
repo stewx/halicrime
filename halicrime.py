@@ -12,10 +12,8 @@ sudo pip install twython
 
 import urllib
 import datetime
-import MySQLdb
+import pymysql as MySQLdb
 import twython
-import _mysql_exceptions
-import os.path
 import locale
 import os
 import sys
@@ -23,17 +21,22 @@ import logging
 import filecmp
 import shutil
 import ConfigParser
+import json
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+LOG_DIR = os.path.join(CURRENT_DIR, 'logs')
+LOG_FILE = os.path.join(LOG_DIR, 'halicrime.log')
 
-logging.basicConfig(filename='%s/logs/halicrime.log' % CURRENT_DIR, 
+if not os.path.isdir(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+logging.basicConfig(filename=LOG_FILE,
                     format='%(asctime)s %(levelname)s: %(message)s', level=logging.INFO)
-locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 config = ConfigParser.ConfigParser()
 config.read('%s/settings.cfg' % CURRENT_DIR)
 
-CSV_URL = config.get('main', 'data_url')
+DATA_URL = config.get('main', 'data_url')
 
 TWITTER_CONSUMER_KEY = config.get('twitter', 'consumer_key')
 TWITTER_CONSUMER_SECRET = config.get('twitter', 'consumer_secret')
@@ -41,10 +44,10 @@ TWITTER_ACCESS_KEY = config.get('twitter', 'access_key')
 TWITTER_ACCESS_SECRET = config.get('twitter', 'access_secret')
 RATE_LIMIT = config.get('twitter', 'rate_limit')
 
-DB_USERNAME = config.get('db', 'db_user')
-DB_PASSWORD = config.get('db', 'db_pass')
-DB_NAME = config.get('db', 'db_name')
-
+DB_HOST = os.getenv('DB_HOST') or 'localhost'
+DB_USERNAME = config.get('db', 'db_user') or os.getenv('MYSQL_USER')
+DB_PASSWORD = config.get('db', 'db_pass') or os.getenv('MYSQL_PASSWORD')
+DB_NAME = config.get('db', 'db_name') or os.getenv('MYSQL_DATABASE')
 
 
 def get_twitter_api():
@@ -55,7 +58,7 @@ def get_twitter_api():
 
 def get_db_connection():
     '''Get MySQL DB connection '''
-    connection = MySQLdb.connect('localhost', DB_USERNAME, DB_PASSWORD, DB_NAME)
+    connection = MySQLdb.connect(DB_HOST, DB_USERNAME, DB_PASSWORD, DB_NAME)
     connection.autocommit(True)
     return connection.cursor()
 
@@ -67,7 +70,7 @@ def parse_row(row):
 
 def get_message_format():
     '''Get the longest message format that we can fit within the allotted characters
-  
+
     '''
     message_format = ''
     return message_format
@@ -77,40 +80,51 @@ def load_data():
     '''Download latest CSV file and load any new data into DB'''
     db = get_db_connection()
 
-    # Delete old event file and move current file to prev_events.csv
-    latest = "%s/csv/latest_events.csv" % CURRENT_DIR
-    prev = "%s/csv/prev_events.csv" % CURRENT_DIR
+    # Delete old event file and move current file to prev
+    DATA_DIR = os.path.join(CURRENT_DIR, 'data')
+
+    if not os.path.isdir(DATA_DIR):
+        os.makedirs(DATA_DIR)
+
+    latest = os.path.join(DATA_DIR, "latest_events.geojson")
+    prev = os.path.join(DATA_DIR, "prev_events.geojson")
     if os.path.isfile(prev):
         os.remove(prev)
     if os.path.isfile(latest):
         shutil.move(latest, prev)
 
     # Download CSV
-    print 'Downloading latest CSV.'
-    urllib.urlretrieve(CSV_URL, latest)
+    print('Downloading latest GEOJSON.')
+    urllib.urlretrieve(DATA_URL, latest)
 
     # Check if new file is same as old
     if os.path.isfile(prev) and filecmp.cmp(latest, prev):
-        print 'No new data in CSV.'
-        logging.info('No new data in CSV.')
+        print('No new data in GEOJSON.')
+        logging.info('No new data in GEOJSON.')
         return
 
     new_events = 0
     # If it has new data, load data into DB
-    with open(latest, 'rb') as csv_file:
-        # Skip header line
-        next(csv_file)
+    with open(latest, 'r') as geojson_file:
+        data = json.load(geojson_file)
+
+        features = data['features']
+
         # Parse each row
-        for row in csv_file:
-            print 'Examining row:\n%s' % ''.join(row)
+        for row in features:
+            props = row.get('properties', {}) # type: dict
             try:
-                extracted_values = parse_row(row)
-                if len(extracted_values) != 9:
-                    raise ValueError('Expected 9 columns of data and got %i.' % len(extracted_values))
-                longitude, latitude, _, _, event_id, date_string, street_name, event_type_id, event_type_name = extracted_values
-                event_date = datetime.datetime.strptime(date_string[:10], '%Y-%m-%d').date()
-            except ValueError:
-                print 'Something wrong with this row: %s' % ''.join(row)
+                print('Examining row:')
+                print(props)
+                longitude, latitude = row['geometry']['coordinates']
+                event_id = props['evt_rin']
+                event_date = datetime.datetime.utcfromtimestamp(props['evt_date'] / 1000).date()
+                street_name = props['location']
+                event_type_id = props['rucr']
+                event_type_name = props['rucr_ext_d']
+            except Exception:
+                print('Something wrong with this row:')
+                print(props)
                 logging.error('Something wrong with this row: %s' % ''.join(row))
                 continue
 
@@ -124,11 +138,11 @@ def load_data():
                         AND `event_type_id` = %s
                        """ % (event_date, event_id, event_type_id))
             if db.rowcount != 0:
-                print 'Already in DB.'
+                print('Already in DB.')
                 continue
             else:
-                print 'New entry.'
-                new_events += 1;
+                print('New entry.')
+                new_events += 1
 
             # Insert into DB
             insert_query = """
@@ -145,7 +159,7 @@ def load_data():
 def post_tweets():
     '''Tweet events from DB'''
     # Init connections
-    db_connection = MySQLdb.connect('localhost', DB_USERNAME, DB_PASSWORD, DB_NAME)
+    db_connection = MySQLdb.connect(DB_HOST, DB_USERNAME, DB_PASSWORD, DB_NAME)
     db_connection.autocommit(True)
     db_dict_cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
 
@@ -154,14 +168,14 @@ def post_tweets():
     # Get shortened URL length from Twitter API
     try:
         shortened_url_length = api.get_twitter_configuration()['short_url_length']
-        print 'Short URL length as per Twitter API is %i.' % shortened_url_length
+        print('Short URL length as per Twitter API is %i.' % shortened_url_length)
     except KeyError:
         shortened_url_length = 25
 
     tweet_count = 0
 
     # TODO: Figure out what to tweet
-    
+
     db_connection.close()
 
 
@@ -169,7 +183,7 @@ def main():
     '''Execute main program'''
 
     if len(sys.argv) != 2 or sys.argv[1] not in ['load_data', 'tweet']:
-        print 'Please supply a function: either load_data or tweet'
+        print('Please supply a function: either load_data or tweet')
         exit()
 
     function = sys.argv[1]
@@ -178,6 +192,7 @@ def main():
         load_data()
     elif function == 'tweet':
         post_tweets()
+
 
 if __name__ == "__main__":
     main()
