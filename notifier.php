@@ -368,7 +368,7 @@ function curl_get_contents($url)
 }
 
 function getIcon($crime_type){
-  $icon_path = '';
+  $icon_path = 'crime.png';
   switch ($crime_type) {
       case 'ASSAULT':
           $icon_path = 'assault.png';
