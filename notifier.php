@@ -10,6 +10,7 @@ require 'vendor/autoload.php';
 
 include 'util.php';
 
+$logging = new Logging;
 $config = parse_ini_file(dirname(__FILE__) . "/settings.cfg", true);
 $STATIC_API_KEY = getenv('GOOGLE_STATIC_KEY');
 $SITE_DOMAIN = getenv('SITE_DOMAIN');
@@ -19,21 +20,21 @@ $INTERVAL = '7 DAY';
 $connection = connect_db();
 
 // Get active subscriptions
-echo "Looking up subscriptions\n";
+$logging->debug("Looking up subscriptions");
 $subscriptions = $connection->query("SELECT * FROM `subscriptions` WHERE `activated` = 1 AND `unsubscribed` = 0");
 
 if (!$subscriptions) {
-  die("Invalid query: " . $connection->error);
+  $message = "Invalid query: " . $connection->error;
+  $logging->error($message);
+  die($message);
 }
 
 $rowcount = mysqli_num_rows($subscriptions);
 
-echo "Subscription count: $rowcount\n";
+$logging->debug("Subscription count: $rowcount");
 
 // For each subscription, check if there have been any matching events since the last run
 while ($subscription = mysqli_fetch_assoc($subscriptions)) {
-  echo "Looking up recent events.";
- 
   $query = "SELECT *
     FROM `events`
     WHERE `date_added` > DATE_SUB(CURDATE(), INTERVAL $INTERVAL)
@@ -62,6 +63,7 @@ function sendNotification($subscription, $events) {
   global $FROM_EMAIL;
   global $connection;
   global $INTERVAL;
+  global $logging;
   
   $earliest_res = $connection->query("SELECT `date`
     FROM `events`
@@ -112,7 +114,7 @@ function sendNotification($subscription, $events) {
       </tr>
     </thead>
   ";
-  echo "Summarizing frequencies...\n";
+
   $row_counter = 0;
   foreach ($event_types_found as $event_type) {
     if (isset($frequencies[$event_type])) {
@@ -170,11 +172,9 @@ function sendNotification($subscription, $events) {
     </thead>
   ";
   
-  echo "Building detail table...\n";
   $row_counter = 0;
   $image_ids = array();
   foreach ($events as $event) {
-    echo "Found event of type {$event['event_type']}\n";
     $date = date("l, M jS", strtotime($event['date']));
     $event_type = $event['event_type'];
     $street_name = ucwords(strtolower($event['street_name']));
@@ -240,9 +240,9 @@ EOT;
     $mail->AltBody = 'stay tuned for a plain text email';
     
     $mail->send();
-    echo "email sent\n";
+    $logging->debug("email sent");
   } catch (Exception $e) {
-    echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+    $logging->error("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
   }
 }
 
@@ -251,8 +251,8 @@ EOT;
 */
 function getPrev($subscription, $start_date, $end_date) {
   global $connection;
+  global $logging;
 
-  echo "Checking previous period.\n";
   $start_date_string = $start_date->format("Y-m-d");
   $end_date_string = $end_date->format("Y-m-d");
   $query = "SELECT `event_type`, COUNT(*) as 'count'
@@ -264,7 +264,8 @@ function getPrev($subscription, $start_date, $end_date) {
   $result = $connection->query($query);
 
   if (!$result) {
-    echo "Invalid query: " . $connection->error . "\n";
+    $message = "Invalid query: " . $connection->error;
+    $logging->error($message);
     return;
   }
 
@@ -283,8 +284,8 @@ function getPrev($subscription, $start_date, $end_date) {
 */
 function getYTD($subscription) {
   global $connection;
+  global $logging;
 
-  echo "Getting YTD stats.\n";
   $query = "SELECT `event_type`, COUNT(*) as 'count'
     FROM `events`
     WHERE YEAR(`date`) = YEAR(CURDATE())
@@ -294,7 +295,8 @@ function getYTD($subscription) {
   $result = $connection->query($query);
 
   if (!$result) {
-    echo "Invalid query: " . $connection->error . "\n";
+    $message = "Invalid query: " . $connection->error;
+    $logging->error($message);
     return;
   }
 
@@ -314,16 +316,17 @@ function getYTD($subscription) {
 function saveImage($id, $latitude, $longitude, $basic_event_type){ 
   global $SITE_DOMAIN;
   global $STATIC_API_KEY;
+  global $logging;
   
   $filename = "img/map_snapshots/event_$id.png";
   $disk_location = dirname(__FILE__) . "/public_html/" . $filename;
   // If we already have the image, don't re-download it
   if (file_exists($disk_location)) {
-    echo "Image already downloaded.\n";
+    $logging->debug("Image already downloaded.");
     return $disk_location;
   }
   
-  echo "Saving image\n";
+  $logging->debug("Saving image");
   $icon_url = "http://$SITE_DOMAIN/" . getIcon($basic_event_type);
   $icon = "icon:$icon_url";
   
@@ -348,7 +351,7 @@ function saveImage($id, $latitude, $longitude, $basic_event_type){
   }
   file_put_contents($disk_location, curl_get_contents($url));
   
-  echo "Saved to $filename\n";
+  $logging->debug("Saved to $filename");
   return $disk_location;
 }
 

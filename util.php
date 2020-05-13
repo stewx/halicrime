@@ -35,3 +35,27 @@ function getGUID() {
         .substr($charid,20,12);
     return $uuid;
 }
+
+class Logging {
+    private $name;
+
+    private $file = __DIR__ . '/logs/halicrime.log';
+
+    private function log($level, $text) {
+        $formatted = date("[Y-m-d H:i:s]")." [$level] $text\n";
+
+        error_log($formatted, 3, $this->file);
+    }
+
+    public function error($text) {
+        $this->log('error', $text);
+    }
+
+    public function info($text) {
+        $this->log('info', $text);
+    }
+    
+    public function debug($text) {
+        $this->log('debug', $text);
+    }
+}
