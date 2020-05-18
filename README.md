@@ -38,3 +38,11 @@ Automated crime event Twitter feed bot for Halifax, NS
 or just:
 
 `docker-compose build`
+
+#### run a one-off script in a container
+
+`docker-compose exec php python halicrime.py load_data`
+
+and:
+
+`docker-compose exec php php notifier.php`

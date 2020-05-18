@@ -112,20 +112,21 @@ def load_data():
 
         # Parse each row
         for row in features:
-            props = row.get('properties', {}) # type: dict
+            props = row.get('properties', {})
             try:
                 print('Examining row:')
                 print(props)
                 longitude, latitude = row['geometry']['coordinates']
                 event_id = props['evt_rin']
-                event_date = datetime.datetime.utcfromtimestamp(props['evt_date'] / 1000).date()
+                event_date = get_date_from_string(props['evt_date'])
                 street_name = props['location']
                 event_type_id = props['rucr']
                 event_type_name = props['rucr_ext_d']
-            except Exception:
+            except Exception as e:
                 print('Something wrong with this row:')
                 print(props)
-                logging.error('Something wrong with this row: %s' % ''.join(row))
+                logging.info('Something wrong with this row: %s', row)
+                logging.exception(e)
                 continue
 
             # Check if it's new
@@ -154,6 +155,24 @@ def load_data():
             db.execute(insert_query)
     db.close()
     logging.info("Saved %i new events to database." % new_events)
+
+
+def get_date_from_string(datelike):
+    """Tries a few formatting methods to transform a string into a date
+    """
+    if '/' in datelike:
+        # @since May 9, 2020
+        dateformat = '%Y/%m/%d'
+    elif '-' in datelike:
+        # original format
+        dateformat = '%Y-%m-%d'
+    else:
+        # possibly timestamp
+        # @since May 6, 2020
+        seconds = int(datelike) / 1000
+        return datetime.datetime.utcfromtimestamp(seconds).date()
+
+    return datetime.datetime.strptime(datelike[:10], dateformat).date()
 
 
 def post_tweets():
